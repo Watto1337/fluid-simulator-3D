@@ -14,9 +14,9 @@ class Particle():
         # Putting itself in the correct cell
         cells[self.cell[0]][self.cell[1]][self.cell[2]].append(self)
 
-    def checkCollisions(self, cells, viscosity):
+    def checkCollisions(self, cells, density):
         # The number of particles in each cell's "neighborhood" influences collision speeds
-        density = 1
+        numParts = 1
 
         # Checking each of the nine closest cells for other particles
         for x in range(-1, 2):
@@ -45,18 +45,15 @@ class Particle():
                         if dist > self.size * 2: continue
 
                         # Incrementing the density for each seen particle to accelerate them faster
-                        if density < 2: density += 0.1
+                        if numParts < 2: numParts += 0.1
 
-                        # Normalizing the length vector and modifying with density
-                        length = viscosity * density / dist
+                        # Normalizing the length vector and modifying with numParts
+                        length = density * numParts / dist
                         for i in range(3):
                             distVect[i] *= length
 
                         # The dot product of positions and velocities
                         dot = velVect[0]*distVect[0] + velVect[1]*distVect[1] + velVect[2]*distVect[2]
-
-                        # The amount of overlap
-                        #jump = self.size * 2 - dist
 
                         for i in range(3):
                             # Moving and accelerating the particles away from each other
@@ -66,7 +63,7 @@ class Particle():
                             self.vel[i]     -= dot  * distVect[i]
                             particle.vel[i] += dot  * distVect[i]
 
-    def move(self, dimensions, cells, gravity, viscosity):
+    def move(self, dimensions, cells, gravity, density):
         self.vel[1] -= gravity
 
         # Removing it from its current cell
@@ -80,7 +77,7 @@ class Particle():
 
             if self.pos[i] < 0 or self.pos[i] > dimensions[i]:
                 self.pos[i] = max(0, min(dimensions[i], self.pos[i]))
-                self.vel[i] *= -viscosity
+                self.vel[i] *= -density
 
             # Putting it in the right cell
             self.cell[i] = int(self.pos[i] / self.size)
