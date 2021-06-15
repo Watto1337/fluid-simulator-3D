@@ -10,13 +10,13 @@ def main():
 
     background = (0, 0, 0)
 
-    showParticles = True
+    showParticles = False
 
     dimensions = (800, 1500, 800)
 
     sliders = []
 
-    zoom = Slider.Slider(4000, 100, 200, (25, 125), (200, 200, 100), "Zoom", sliders)
+    zoom = Slider.Slider(4000, 100, 200, (25, 275), (200, 100, 200), "Zoom", sliders)
 
     numParticles = 500
     particleSize = 75
@@ -24,8 +24,8 @@ def main():
                       Slider.Slider(0, 255, 200, (25, 50), (100, 200, 100), "Green", sliders),\
                       Slider.Slider(0, 255, 200, (25, 75), (100, 100, 200), "Blue", sliders)]
     
-    gravity = Slider.Slider(0.0, 10.0, 200, (25, 150), (200, 200, 100), "Gravity", sliders)
-    viscosity = Slider.Slider(0.9, 0.1, 200, (25, 175), (200, 200, 100), "Viscosity", sliders)
+    gravity = Slider.Slider(0.0, 10.0, 200, (25, 125), (200, 200, 100), "Gravity", sliders)
+    viscosity = Slider.Slider(0.9, 0.1, 200, (25, 150), (200, 200, 100), "Density", sliders)
 
     mouseRange = 100**2
 
@@ -33,9 +33,9 @@ def main():
     sizeRatio = lightSize / particleSize
     ceilSizeRatio = math.ceil(sizeRatio)
 
-    smoothing = Slider.Slider(1.0, 10.0, 200, (25, 225), (100, 200, 200), "Light Smoothing", sliders)
+    smoothing = Slider.Slider(1.0, 10.0, 200, (25, 200), (100, 200, 200), "Light Smoothing", sliders)
 
-    frameDelay = 0.0
+    frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 225), (100, 200, 200), "Speed", sliders)
 
     # The mouse position is used to introduce motion
     mousePos = [(0.0, 0.0), pygame.mouse.get_pos()]
@@ -124,7 +124,7 @@ def main():
 
         pygame.display.update()
 
-        time.sleep(frameDelay)
+        time.sleep(frameDelay.val)
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
