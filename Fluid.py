@@ -14,18 +14,10 @@ def main():
 
     dimensions = (800, 1500, 800)
 
-    sliders = []
-
-    zoom = Slider.Slider(4000, 100, 200, (25, 275), (200, 100, 200), "Zoom", sliders)
-
     numParticles = 500
     particleSize = 75
-    particleColour = [Slider.Slider(0, 255, 200, (25, 25), (200, 100, 100), "Red", sliders),\
-                      Slider.Slider(0, 255, 200, (25, 50), (100, 200, 100), "Green", sliders),\
-                      Slider.Slider(0, 255, 200, (25, 75), (100, 100, 200), "Blue", sliders)]
-    
-    gravity = Slider.Slider(0.0, 10.0, 200, (25, 125), (200, 200, 100), "Gravity", sliders)
-    viscosity = Slider.Slider(0.9, 0.1, 200, (25, 150), (200, 200, 100), "Density", sliders)
+
+    numPalattes = 2
 
     mouseRange = 100**2
 
@@ -33,9 +25,23 @@ def main():
     sizeRatio = lightSize / particleSize
     ceilSizeRatio = math.ceil(sizeRatio)
 
+    sliders = []
+
+    palatte = [{} for i in range(numPalattes)]
+
+    zoom = Slider.Slider(4000, 100, 200, (25, 275), (200, 100, 200), "Zoom", sliders)
+
     smoothing = Slider.Slider(1.0, 10.0, 200, (25, 200), (100, 200, 200), "Light Smoothing", sliders)
 
     frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 225), (100, 200, 200), "Speed", sliders)
+
+    for i in range(numPalattes):
+        palatte[i]["colour"] = [Slider.Slider(0, 255, 200, (25 + 300 * i, 25), (200, 100, 100), "Red", sliders),\
+                                Slider.Slider(0, 255, 200, (25 + 300 * i, 50), (100, 200, 100), "Green", sliders),\
+                                Slider.Slider(0, 255, 200, (25 + 300 * i, 75), (100, 100, 200), "Blue", sliders)]
+        
+        palatte[i]["gravity"] = Slider.Slider(-10.0, 10.0, 200, (25 + 300 * i, 125), (200, 200, 100), "Gravity", sliders)
+        palatte[i]["viscosity"]= Slider.Slider(0.9, 0.1, 200, (25 + 300 * i, 150), (200, 200, 100), "Density", sliders)
 
     # The mouse position is used to introduce motion
     mousePos = [(0.0, 0.0), pygame.mouse.get_pos()]
@@ -48,12 +54,12 @@ def main():
              for x in range(dimensions[0] // particleSize + 1)]
 
     # Creating the lights array to store the values at each grid point
-    lights = [[[0 for z in range(dimensions[2] // lightSize)]\
+    lights = [[[[0, 0, 0] for z in range(dimensions[2] // lightSize)]\
                for y in range(dimensions[1] // lightSize)]
               for x in range(dimensions[0] // lightSize)]
 
     # Creating the particles list to contain the particles for easy access
-    particles = [Fluid_Particle.Particle(particleSize, dimensions, cells) for i in range(numParticles)]
+    particles = [Fluid_Particle.Particle(random.randint(0, numPalattes - 1), dimensions, cells, particleSize) for i in range(numParticles)]
 
     while game:
         # Getting the mouse and key states
@@ -80,15 +86,15 @@ def main():
         for particle in particles:
             # Hold P to pause
             if not keys[pygame.K_p]:
-                particle.checkCollisions(cells, viscosity.val)
-                particle.move(dimensions, cells, gravity.val, viscosity.val)
+                particle.checkCollisions(cells, palatte[particle.id]["viscosity"].val, particleSize)
+                particle.move(dimensions, cells, palatte[particle.id]["gravity"].val, palatte[particle.id]["viscosity"].val, particleSize)
 
-            pos = project(particle.pos, sincos, dimensions, (0,0,zoom.val), screen)
+            pos = project(particle.pos, sincos, dimensions, (0, 0, zoom.val), screen)
 
             if showParticles:
-                r = max(0, min(255, particleColour[0].val * pos[1]))
-                g = max(0, min(255, particleColour[1].val * pos[1]))
-                b = max(0, min(255, particleColour[2].val * pos[1]))
+                r = max(0, min(255, palatte[particle.id]["colour"][0].val * pos[1]))
+                g = max(0, min(255, palatte[particle.id]["colour"][1].val * pos[1]))
+                b = max(0, min(255, palatte[particle.id]["colour"][2].val * pos[1]))
 
                 pygame.draw.circle(display, (r, g, b), pos[0][:2], particleSize*0.5*pos[1])
 
@@ -104,21 +110,24 @@ def main():
                     for z in range(len(lights[x][y]) - 1, -1, -1):
                         cell = [int(x * sizeRatio), int(y * sizeRatio), int(z * sizeRatio)]
 
-                        density = 0
+                        colour = [0, 0, 0]
 
                         for i in range(ceilSizeRatio):
                             for j in range(ceilSizeRatio):
                                 for k in range(ceilSizeRatio):
-                                    density += len(cells[cell[0] + i][cell[1] + j][cell[2] + k])
+                                    for l in range(len(cells[cell[0] + i][cell[1] + j][cell[2] + k])):
+                                        for m in range(3):
+                                            colour[m] += palatte[cells[cell[0] + i][cell[1] + j][cell[2] + k][l].id]["colour"][m].val
 
-                        lights[x][y][z] = (lights[x][y][z] * (smoothing.val - 1) + density) / smoothing.val
+                        for i in range(3):
+                            lights[x][y][z][i] = (lights[x][y][z][i] * (smoothing.val - 1) + colour[i]) / smoothing.val
 
-                        if lights[x][y][z] > 0.1:
-                            pos = project((x*lightSize, y*lightSize, z*lightSize), sincos, dimensions, (0,0,zoom.val), screen)
+                        if sum(lights[x][y][z]) > 0.3:
+                            pos = project((x*lightSize, y*lightSize, z*lightSize), sincos, dimensions, (0, 0, zoom.val), screen)
 
-                            r = max(0, min(255, particleColour[0].val * lights[x][y][z] * 0.25))
-                            g = max(0, min(255, particleColour[1].val * lights[x][y][z] * 0.25))
-                            b = max(0, min(255, particleColour[2].val * lights[x][y][z] * 0.25))
+                            r = max(0, min(255, lights[x][y][z][0] * 0.25))
+                            g = max(0, min(255, lights[x][y][z][1] * 0.25))
+                            b = max(0, min(255, lights[x][y][z][2] * 0.25))
 
                             pygame.draw.circle(display, (r, g, b), pos[0][:2], lightSize*0.2*pos[1])
 
