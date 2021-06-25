@@ -2,19 +2,20 @@ import math, random
 
 # The Particle class has all of the necessary functions for moving and interacting the particles
 class Particle():
-    def __init__(self, size, dimensions, cells):
-        self.size = size
+    def __init__(self, typeID, dimensions, cells, size):
+        # Different particles can use different physics and colours determined by the id
+        self.id = typeID
 
         # Giving the particle a random position and finding the cell it should be in
         self.pos = [random.randint(0, dimensions[i]) for i in range(3)]
-        self.cell = [int(self.pos[i] / self.size) for i in range(3)]
+        self.cell = [int(self.pos[i] / size) for i in range(3)]
 
         self.vel = [0.0, 0.0, 0.0]
 
         # Putting itself in the correct cell
         cells[self.cell[0]][self.cell[1]][self.cell[2]].append(self)
 
-    def checkCollisions(self, cells, density):
+    def checkCollisions(self, cells, density, size):
         # The number of particles in each cell's "neighborhood" influences collision speeds
         numParts = 1
 
@@ -42,7 +43,7 @@ class Particle():
                         dist = math.sqrt(distVect[0]**2 + distVect[1]**2 + distVect[2]**2)
 
                         # Don't bounce them if it's not actually a collision
-                        if dist > self.size * 2: continue
+                        if dist > size * 2: continue
 
                         # Incrementing the density for each seen particle to accelerate them faster
                         if numParts < 2: numParts += 0.1
@@ -57,20 +58,26 @@ class Particle():
 
                         for i in range(3):
                             # Moving and accelerating the particles away from each other
-                            self.pos[i]     += self.size * distVect[i]
-                            particle.pos[i] -= self.size * distVect[i]
+                            self.pos[i]     += size * distVect[i]
+                            particle.pos[i] -= size * distVect[i]
 
                             self.vel[i]     -= dot  * distVect[i]
                             particle.vel[i] += dot  * distVect[i]
 
-    def move(self, dimensions, cells, gravity, density):
-        self.vel[1] -= gravity
-
+    def move(self, dimensions, cells, gravity, density, size):
         # Removing it from its current cell
         cells[self.cell[0]][self.cell[1]][self.cell[2]].remove(self)
 
+        # A vector to the gravity point
+        gravVect = [self.pos[i] - gravity[0][i].val for i in range(3)]
+
+        # The inverse length of the gravity vector
+        gravLen = math.sqrt(gravVect[0]**2 + gravVect[1]**2 + gravVect[2]**2)
+        if gravLen: gravLen = gravity[1].val / gravLen
+
         for i in range(3):
-            self.vel[i] = max(-100, min(100, self.vel[i]))
+            # Applying gravity and roughly capping the speed
+            self.vel[i] = max(-50, min(50, self.vel[i] - gravVect[i] * gravLen))
 
             # Moving the particle and bouncing it off walls
             self.pos[i] += self.vel[i]
@@ -80,6 +87,6 @@ class Particle():
                 self.vel[i] *= -density
 
             # Putting it in the right cell
-            self.cell[i] = int(self.pos[i] / self.size)
+            self.cell[i] = int(self.pos[i] / size)
 
         cells[self.cell[0]][self.cell[1]][self.cell[2]].append(self)
