@@ -1,65 +1,73 @@
 import pygame, math, random, time, Fluid_Particle, Slider
 
 def main():
+    # Initializing
     pygame.init()
     game = True
-
     screen = (500, 200, 900)
     display = pygame.display.set_mode(screen[:2], flags = pygame.RESIZABLE)
     pygame.display.set_caption("Fluid Simulator 3D")
 
     background = (0, 0, 0)
 
+    # When showParticles is False, the light cube display is shown
+    # When showParticles is True, the individual particles are shown
     showParticles = False
 
+    # The size of the space the fluid exists in
     dimensions = (800, 1500, 800)
 
     numParticles = 500
-    particleSize = 75
+    particleSize = 50
 
-    numPalattes = 2
-
-    mouseRange = 100**2
-
+    # The width of the light cube lights (in pixels) and precomputed relevant ratios
     lightSize = 100
     sizeRatio = lightSize / particleSize
     ceilSizeRatio = math.ceil(sizeRatio)
 
-    sliders = []
-
+    # Palattes are used to give particles different colours and properties
+    numPalattes = 1
     palatte = [{} for i in range(numPalattes)]
 
-    zoom = Slider.Slider(4000, 100, 200, (25, 275), (200, 100, 200), "Zoom", sliders)
+    # All of the sliders are kept in this list for easy access
+    sliders = []
 
-    smoothing = Slider.Slider(1.0, 10.0, 200, (25, 200), (100, 200, 200), "Light Smoothing", sliders)
+    zoom = Slider.Slider(4000, 100, 200, (25, 375), (200, 100, 200), "Zoom", sliders)                   # The zoom level of the 3D render
 
-    frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 225), (100, 200, 200), "Speed", sliders)
+    brightness = Slider.Slider(0.0, 1.0, 200, (25, 275), (100, 200, 200), "Brightness", sliders)        # The brightness of the lights
 
+    smoothing = Slider.Slider(1.0, 10.0, 200, (25, 300), (100, 200, 200), "Light Smoothing", sliders)   # The amount of smoothing on the lights
+
+    frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 325), (100, 200, 200), "Speed", sliders)             # The delay between frames
+    frameDelay.draw((225, 325), True, display)
+
+    # Setting the palatte properties
     for i in range(numPalattes):
         palatte[i]["colour"] = [Slider.Slider(0, 255, 200, (25 + 300 * i, 25), (200, 100, 100), "Red", sliders),\
                                 Slider.Slider(0, 255, 200, (25 + 300 * i, 50), (100, 200, 100), "Green", sliders),\
-                                Slider.Slider(0, 255, 200, (25 + 300 * i, 75), (100, 100, 200), "Blue", sliders)]
+                                Slider.Slider(0, 255, 200, (25 + 300 * i, 75), (100, 100, 200), "Blue", sliders)]           # The colour of the fluid
         
-        palatte[i]["gravity"] = Slider.Slider(-10.0, 10.0, 200, (25 + 300 * i, 125), (200, 200, 100), "Gravity", sliders)
-        palatte[i]["viscosity"]= Slider.Slider(0.9, 0.1, 200, (25 + 300 * i, 150), (200, 200, 100), "Density", sliders)
-
-    # The mouse position is used to introduce motion
-    mousePos = [(0.0, 0.0), pygame.mouse.get_pos()]
-
-    rotation = [0.0, 0.0]
+        palatte[i]["density"] = Slider.Slider(0.9, 0.1, 200, (25 + 300 * i, 125), (200, 200, 100), "Density", sliders)      # The density of the fluid
+        palatte[i]["gravity"] = [[Slider.Slider(0, dimensions[j], 200, (25 + 300 * i, 175 + j * 25), (200, 100, 200), "Gravity " + chr(ord("X") + j), sliders) for j in range(3)],\
+                                 Slider.Slider(-10.0, 10.0, 200, (25 + 300 * i, 150), (200, 200, 100), "Gravity", sliders)] # The point and force of gravity
 
     # Creating the cells array to contain the particles sorted by position
     cells = [[[[] for z in range(dimensions[2] // particleSize + 1)]\
               for y in range(dimensions[1] // particleSize + 1)]\
              for x in range(dimensions[0] // particleSize + 1)]
 
-    # Creating the lights array to store the values at each grid point
+    # Creating the lights array to store the values at each light point in the cube
     lights = [[[[0, 0, 0] for z in range(dimensions[2] // lightSize)]\
                for y in range(dimensions[1] // lightSize)]
               for x in range(dimensions[0] // lightSize)]
 
     # Creating the particles list to contain the particles for easy access
     particles = [Fluid_Particle.Particle(random.randint(0, numPalattes - 1), dimensions, cells, particleSize) for i in range(numParticles)]
+
+    # The mouse is used to move the particles within a certain range and rotate the screen
+    mouseRange = 15000
+    mousePos = [(0.0, 0.0), pygame.mouse.get_pos()]
+    rotation = [0.0, 0.0]
 
     while game:
         # Getting the mouse and key states
@@ -86,10 +94,11 @@ def main():
         for particle in particles:
             # Hold P to pause
             if not keys[pygame.K_p]:
-                particle.checkCollisions(cells, palatte[particle.id]["viscosity"].val, particleSize)
-                particle.move(dimensions, cells, palatte[particle.id]["gravity"].val, palatte[particle.id]["viscosity"].val, particleSize)
+                particle.checkCollisions(cells, palatte[particle.id]["density"].val, particleSize)
+                particle.move(dimensions, cells, palatte[particle.id]["gravity"], palatte[particle.id]["density"].val, particleSize)
 
-            pos = project(particle.pos, sincos, dimensions, (0, 0, zoom.val), screen)
+            # Finding the position of the particle on the screen
+            pos = project(particle.pos, sincos, [dimensions[i]*0.5 for i in range(3)], (0, 0, zoom.val), screen)
 
             if showParticles:
                 r = max(0, min(255, palatte[particle.id]["colour"][0].val * pos[1]))
@@ -103,31 +112,39 @@ def main():
                 particle.vel[0] += (mousePos[1][0] - mousePos[0][0])
                 particle.vel[1] += (mousePos[0][1] - mousePos[1][1])
 
-        # Drawing the grid points
+        # Drawing the lights
         if not showParticles:
+            # Iterating through each light in the cube
             for x in range(len(lights)):
                 for y in range(len(lights[x])):
-                    for z in range(len(lights[x][y]) - 1, -1, -1):
+                    for z in range(len(lights[x][y]) - 1, -1, -1):  # The Z direction was reversed earlier so it is reversed here to cancel it out
+                        # The cell the light is contained in is found
                         cell = [int(x * sizeRatio), int(y * sizeRatio), int(z * sizeRatio)]
 
+                        # The average colour of all the particles in the range of the light is stored here
                         colour = [0, 0, 0]
 
+                        # Iterating through all of the cells near the light
                         for i in range(ceilSizeRatio):
                             for j in range(ceilSizeRatio):
                                 for k in range(ceilSizeRatio):
-                                    for l in range(len(cells[cell[0] + i][cell[1] + j][cell[2] + k])):
-                                        for m in range(3):
-                                            colour[m] += palatte[cells[cell[0] + i][cell[1] + j][cell[2] + k][l].id]["colour"][m].val
+                                    # Iterating through all of the particles in each cell
+                                    for m in range(len(cells[cell[0] + i][cell[1] + j][cell[2] + k])):
+                                        # Iterating through each colour channel in each particle and storing it
+                                        for n in range(3):
+                                            colour[n] += palatte[cells[cell[0] + i][cell[1] + j][cell[2] + k][m].id]["colour"][n].val
 
+                        # Averaging it with the previous colour value of the light
                         for i in range(3):
                             lights[x][y][z][i] = (lights[x][y][z][i] * (smoothing.val - 1) + colour[i]) / smoothing.val
 
+                        # Projecting the light point and capping the colour before drawing it to the screen
                         if sum(lights[x][y][z]) > 0.3:
-                            pos = project((x*lightSize, y*lightSize, z*lightSize), sincos, dimensions, (0, 0, zoom.val), screen)
+                            pos = project((x*lightSize, y*lightSize, z*lightSize), sincos, [dimensions[i]*0.5 for i in range(3)], (lightSize*0.25, lightSize*-0.25, zoom.val), screen)
 
-                            r = max(0, min(255, lights[x][y][z][0] * 0.25))
-                            g = max(0, min(255, lights[x][y][z][1] * 0.25))
-                            b = max(0, min(255, lights[x][y][z][2] * 0.25))
+                            r = max(0, min(255, lights[x][y][z][0] * brightness.val))
+                            g = max(0, min(255, lights[x][y][z][1] * brightness.val))
+                            b = max(0, min(255, lights[x][y][z][2] * brightness.val))
 
                             pygame.draw.circle(display, (r, g, b), pos[0][:2], lightSize*0.2*pos[1])
 
@@ -135,6 +152,7 @@ def main():
 
         time.sleep(frameDelay.val)
 
+        # Getting the pygame events to pause the simulation, change modes, and quit
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
@@ -144,22 +162,28 @@ def main():
             elif e.type == pygame.VIDEORESIZE:
                 screen = display.get_size() + (screen[2],)
 
-def project(point, sincos, offset1, offset2, screen):
-    p = [point[i] - offset1[i] / 2 for i in range(3)]
+# A function to rotate and project a point in 3D space to a 2D screen
+def project(point, sincos, origin, offset, screen):
+    # Offsetting the point to the rotation origin
+    p = [point[i] - origin[i] for i in range(3)]
 
+    # Rotating the point around the x and y axes
     p[0], p[2] = p[0] * sincos[3] - p[2] * sincos[1], p[0] * sincos[1] + p[2] * sincos[3]
     p[1], p[2] = p[1] * sincos[2] - p[2] * sincos[0], p[1] * sincos[0] + p[2] * sincos[2]
 
-    p[2] += offset2[2]
+    # Offsetting the Z coordinate of the point
+    p[2] += offset[2]
 
+    # Cutting out points behind or too close to the screen and then getting the ratio
     if p[2] < 1: p[2] = 1
     ratio = screen[2] / p[2]
 
+    # Projecting the X and Y coordinates by the ratio and adding the offset
     p[0] *= ratio
     p[1] *= -ratio
 
-    p[0] += offset2[0] + screen[0] * 0.5
-    p[1] += offset2[1] + screen[1] * 0.5
+    p[0] += offset[0] + screen[0] * 0.5
+    p[1] += offset[1] + screen[1] * 0.5
 
     return (p, ratio)
 
