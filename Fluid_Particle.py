@@ -2,35 +2,40 @@ import math, random
 
 # The Particle class has all of the necessary functions for moving and interacting the particles
 class Particle():
-    def __init__(self, typeID, dimensions, cells, size):
+    def __init__(self, typeID, dimensions, cellArrays, cellSizes): # The first array of cells must be the collision array
         # Different particles can use different physics and colours determined by the id
         self.id = typeID
 
-        # Giving the particle a random position and finding the cell it should be in
+        # Initializing the particle's position and velocity
         self.pos = [random.randint(0, dimensions[i]) for i in range(3)]
-        self.cell = [int(self.pos[i] / size) for i in range(3)]
-
         self.vel = [0.0, 0.0, 0.0]
 
-        # Putting itself in the correct cell
-        cells[self.cell[0]][self.cell[1]][self.cell[2]].append(self)
+        self.cells = []
 
-    def checkCollisions(self, cells, density, size):
+        for i in range(len(cellArrays)):
+            # Finding the cell it should be in
+            self.cells.append([int(self.pos[j] / cellSizes[i]) for j in range(3)])
+
+            # Putting itself in the correct cell
+            try: cellArrays[i][self.cells[i][0]][self.cells[i][1]][self.cells[i][2]].append(self)
+            except: print(self.pos, self.cells, cellSizes, len(cellArrays[i]), len(cellArrays[i][0]), len(cellArrays[i][0][0]))
+
+    def checkCollisions(self, cells, size, density):
         # The number of particles in each cell's "neighborhood" influences collision speeds
         numParts = 1
 
         # Checking each of the nine closest cells for other particles
         for x in range(-1, 2):
-            if self.cell[0] + x < 0 or self.cell[0] + x >= len(cells): continue
+            if self.cells[0][0] + x < 0 or self.cells[0][0] + x >= len(cells): continue
 
             for y in range(-1, 2):
-                if self.cell[1] + y < 0 or self.cell[1] + y >= len(cells[x]): continue
+                if self.cells[0][1] + y < 0 or self.cells[0][1] + y >= len(cells[x]): continue
 
                 for z in range(-1, 2):
-                    if self.cell[2] + z < 0 or self.cell[2] + z >= len(cells[x][y]) or \
-                       len(cells[self.cell[0] + x][self.cell[1] + y][self.cell[2] + z]) == 0: continue
+                    if self.cells[0][2] + z < 0 or self.cells[0][2] + z >= len(cells[x][y]) or \
+                       len(cells[self.cells[0][0] + x][self.cells[0][1] + y][self.cells[0][2] + z]) == 0: continue
 
-                    for particle in cells[self.cell[0] + x][self.cell[1] + y][self.cell[2] + z]:
+                    for particle in cells[self.cells[0][0] + x][self.cells[0][1] + y][self.cells[0][2] + z]:
                         # Eliminate zero-division errors and collisions with self
                         if self.pos[0] == particle.pos[0] and \
                            self.pos[1] == particle.pos[1] and \
@@ -64,9 +69,10 @@ class Particle():
                             self.vel[i]     -= dot  * distVect[i]
                             particle.vel[i] += dot  * distVect[i]
 
-    def move(self, dimensions, cells, gravity, density, size):
+    def move(self, dimensions, cellArrays, cellSizes, gravity, density):
         # Removing it from its current cell
-        cells[self.cell[0]][self.cell[1]][self.cell[2]].remove(self)
+        for i in range(len(cellArrays)):
+            cellArrays[i][self.cells[i][0]][self.cells[i][1]][self.cells[i][2]].remove(self)
 
         # A vector to the gravity point
         gravVect = [self.pos[i] - gravity[0][i].val for i in range(3)]
@@ -77,7 +83,7 @@ class Particle():
 
         for i in range(3):
             # Applying gravity and roughly capping the speed
-            self.vel[i] = max(-50, min(50, self.vel[i] - gravVect[i] * gravLen))
+            self.vel[i] = max(-100, min(100, self.vel[i] - gravVect[i] * gravLen))
 
             # Moving the particle and bouncing it off walls
             self.pos[i] += self.vel[i]
@@ -86,7 +92,7 @@ class Particle():
                 self.pos[i] = max(0, min(dimensions[i], self.pos[i]))
                 self.vel[i] *= -density
 
-            # Putting it in the right cell
-            self.cell[i] = int(self.pos[i] / size)
+        for i in range(len(cellArrays)):
+            self.cells[i] = [int(self.pos[j] / cellSizes[i]) for j in range(3)]
 
-        cells[self.cell[0]][self.cell[1]][self.cell[2]].append(self)
+            cellArrays[i][self.cells[i][0]][self.cells[i][1]][self.cells[i][2]].append(self)
