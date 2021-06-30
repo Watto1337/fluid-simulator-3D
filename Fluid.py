@@ -15,9 +15,9 @@ def main():
     showParticles = False
 
     # The size of the space the fluid exists in
-    dimensions = (800, 1500, 800)
+    dimensions = (700, 1400, 700)
 
-    numParticles = 500
+    numParticles = 1000
     particleSize = 50
 
     # The width of the light cube lights (in pixels) and precomputed relevant ratios
@@ -26,7 +26,7 @@ def main():
     ceilSizeRatio = math.ceil(sizeRatio)
 
     # Palattes are used to give particles different colours and properties
-    numPalattes = 1
+    numPalattes = 3
     palatte = [{} for i in range(numPalattes)]
 
     # All of the sliders are kept in this list for easy access
@@ -39,7 +39,7 @@ def main():
     smoothing = Slider.Slider(1.0, 10.0, 200, (25, 300), (100, 200, 200), "Light Smoothing", sliders)   # The amount of smoothing on the lights
 
     frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 325), (100, 200, 200), "Speed", sliders)             # The delay between frames
-    frameDelay.draw((225, 325), True, display)
+    frameDelay.adjust((225, 325))
 
     # Setting the palatte properties
     for i in range(numPalattes):
@@ -48,7 +48,7 @@ def main():
                                 Slider.Slider(0, 255, 200, (25 + 300 * i, 75), (100, 100, 200), "Blue", sliders)]           # The colour of the fluid
         
         palatte[i]["density"] = Slider.Slider(0.9, 0.1, 200, (25 + 300 * i, 125), (200, 200, 100), "Density", sliders)      # The density of the fluid
-        palatte[i]["gravity"] = [[Slider.Slider(0, dimensions[j], 200, (25 + 300 * i, 175 + j * 25), (200, 100, 200), "Gravity " + chr(ord("X") + j), sliders) for j in range(3)],\
+        palatte[i]["gravity"] = [[Slider.Slider(-dimensions[j]*0.5, dimensions[j]*1.5, 200, (25 + 300 * i, 175 + j * 25), (200, 100, 200), "Gravity " + chr(ord("X") + j), sliders) for j in range(3)],\
                                  Slider.Slider(-10.0, 10.0, 200, (25 + 300 * i, 150), (200, 200, 100), "Gravity", sliders)] # The point and force of gravity
 
     # Creating the cells array to contain the particles sorted by position
@@ -57,12 +57,17 @@ def main():
              for x in range(dimensions[0] // particleSize + 1)]
 
     # Creating the lights array to store the values at each light point in the cube
-    lights = [[[[0, 0, 0] for z in range(dimensions[2] // lightSize)]\
-               for y in range(dimensions[1] // lightSize)]
-              for x in range(dimensions[0] // lightSize)]
+    lights = [[[[0, 0, 0] for z in range(dimensions[2] // lightSize + 1)]\
+               for y in range(dimensions[1] // lightSize + 1)]
+              for x in range(dimensions[0] // lightSize + 1)]
+
+    # Creating the light cells array to store the particles near each light point in the cube
+    lightCells = [[[[] for z in range(len(lights[x][y]))]\
+               for y in range(len(lights[x]))]
+              for x in range(len(lights))]
 
     # Creating the particles list to contain the particles for easy access
-    particles = [Fluid_Particle.Particle(random.randint(0, numPalattes - 1), dimensions, cells, particleSize) for i in range(numParticles)]
+    particles = [Fluid_Particle.Particle(random.randint(0, numPalattes - 1), dimensions, [cells, lightCells], [particleSize, lightSize]) for i in range(numParticles)]
 
     # The mouse is used to move the particles within a certain range and rotate the screen
     mouseRange = 15000
@@ -94,8 +99,8 @@ def main():
         for particle in particles:
             # Hold P to pause
             if not keys[pygame.K_p]:
-                particle.checkCollisions(cells, palatte[particle.id]["density"].val, particleSize)
-                particle.move(dimensions, cells, palatte[particle.id]["gravity"], palatte[particle.id]["density"].val, particleSize)
+                particle.checkCollisions(cells, particleSize, palatte[particle.id]["density"].val)
+                particle.move(dimensions, [cells, lightCells], [particleSize, lightSize], palatte[particle.id]["gravity"], palatte[particle.id]["density"].val)
 
             # Finding the position of the particle on the screen
             pos = project(particle.pos, sincos, [dimensions[i]*0.5 for i in range(3)], (0, 0, zoom.val), screen)
@@ -114,29 +119,26 @@ def main():
 
         # Drawing the lights
         if not showParticles:
+            dataStr = ""
+
             # Iterating through each light in the cube
             for x in range(len(lights)):
                 for y in range(len(lights[x])):
-                    for z in range(len(lights[x][y]) - 1, -1, -1):  # The Z direction was reversed earlier so it is reversed here to cancel it out
-                        # The cell the light is contained in is found
-                        cell = [int(x * sizeRatio), int(y * sizeRatio), int(z * sizeRatio)]
-
+                    for z in range(len(lights[x][y])):
                         # The average colour of all the particles in the range of the light is stored here
                         colour = [0, 0, 0]
 
-                        # Iterating through all of the cells near the light
-                        for i in range(ceilSizeRatio):
-                            for j in range(ceilSizeRatio):
-                                for k in range(ceilSizeRatio):
-                                    # Iterating through all of the particles in each cell
-                                    for m in range(len(cells[cell[0] + i][cell[1] + j][cell[2] + k])):
-                                        # Iterating through each colour channel in each particle and storing it
-                                        for n in range(3):
-                                            colour[n] += palatte[cells[cell[0] + i][cell[1] + j][cell[2] + k][m].id]["colour"][n].val
+                        # Iterating through all of the particles near the light
+                        for particle in lightCells[x][y][z]:
+                            # Iterating through each colour channel in each particle and storing it
+                            for i in range(3):
+                                colour[i] += palatte[particle.id]["colour"][i].val
 
                         # Averaging it with the previous colour value of the light
                         for i in range(3):
                             lights[x][y][z][i] = (lights[x][y][z][i] * (smoothing.val - 1) + colour[i]) / smoothing.val
+
+                        dataStr += " " + bin(int(lights[x][y][z][0]))[2:].zfill(8) + " " + bin(int(lights[x][y][z][1]))[2:].zfill(8) + " " + bin(int(lights[x][y][z][2]))[2:].zfill(8)
 
                         # Projecting the light point and capping the colour before drawing it to the screen
                         if sum(lights[x][y][z]) > 0.3:
@@ -147,6 +149,8 @@ def main():
                             b = max(0, min(255, lights[x][y][z][2] * brightness.val))
 
                             pygame.draw.circle(display, (r, g, b), pos[0][:2], lightSize*0.2*pos[1])
+
+            if keys[pygame.K_l]: print(getDDP(dataStr))
 
         pygame.display.update()
 
@@ -162,10 +166,17 @@ def main():
             elif e.type == pygame.VIDEORESIZE:
                 screen = display.get_size() + (screen[2],)
 
+def getDDP(data):
+    length = bin(len(data) // 8)[2:].zfill(16)
+
+    return "01000001 00000000 00000000 00000001 00000000 00000000 00000000 00000011 " + length[:8] + " " + length[8:] + data
+
 # A function to rotate and project a point in 3D space to a 2D screen
 def project(point, sincos, origin, offset, screen):
     # Offsetting the point to the rotation origin
     p = [point[i] - origin[i] for i in range(3)]
+
+    p[2] *= -1
 
     # Rotating the point around the x and y axes
     p[0], p[2] = p[0] * sincos[3] - p[2] * sincos[1], p[0] * sincos[1] + p[2] * sincos[3]
