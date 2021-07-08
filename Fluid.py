@@ -1,4 +1,4 @@
-import pygame, math, random, time, Fluid_Particle, Slider
+import pygame, math, random, time, Particle, Slider, Button
 
 def main():
     # Initializing
@@ -29,17 +29,23 @@ def main():
     numPalattes = 3
     palatte = [{} for i in range(numPalattes)]
 
-    # All of the sliders are kept in this list for easy access
+    # All of the sliders and buttons are kept in lists for easy access
     sliders = []
+    buttons = []
 
-    zoom = Slider.Slider(4000, 100, 200, (25, 375), (200, 100, 200), "Zoom", sliders)                   # The zoom level of the 3D render
+    brightness = Slider.Slider(0.0, 1.0, 200, (25, 385), (100, 200, 200), "Brightness", sliders)        # The brightness of the lights
 
-    brightness = Slider.Slider(0.0, 1.0, 200, (25, 275), (100, 200, 200), "Brightness", sliders)        # The brightness of the lights
+    smoothing = Slider.Slider(1.0, 10.0, 200, (25, 410), (100, 200, 200), "Light Smoothing", sliders)   # The amount of smoothing on the lights
 
-    smoothing = Slider.Slider(1.0, 10.0, 200, (25, 300), (100, 200, 200), "Light Smoothing", sliders)   # The amount of smoothing on the lights
+    frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 435), (100, 200, 200), "Speed", sliders)             # The delay between frames
+    frameDelay.set(0.0)
 
-    frameDelay = Slider.Slider(0.1, 0.0, 200, (25, 325), (100, 200, 200), "Speed", sliders)             # The delay between frames
-    frameDelay.adjust((225, 325))
+    zoom = Slider.Slider(4000, 100, 200, (25, 485), (200, 100, 200), "Zoom", sliders)                   # The zoom level of the 3D render
+
+    waveLeft =  Button.Button(60, (25,  290), (100, 150, 250), pygame.K_KP4, "Left", buttons)
+    waveRight = Button.Button(60, (165, 290), (100, 150, 250), pygame.K_KP6, "Right", buttons)
+    waveUp =    Button.Button(60, (95,  250), (100, 150, 250), pygame.K_KP8, "Up", buttons)
+    waveDown =  Button.Button(60, (95, 330), (100, 150, 250), pygame.K_KP2, "Down", buttons)
 
     # Setting the palatte properties
     for i in range(numPalattes):
@@ -47,7 +53,8 @@ def main():
                                 Slider.Slider(0, 255, 200, (25 + 300 * i, 50), (100, 200, 100), "Green", sliders),\
                                 Slider.Slider(0, 255, 200, (25 + 300 * i, 75), (100, 100, 200), "Blue", sliders)]           # The colour of the fluid
         
-        palatte[i]["density"] = Slider.Slider(0.9, 0.1, 200, (25 + 300 * i, 125), (200, 200, 100), "Density", sliders)      # The density of the fluid
+        palatte[i]["density"] = Slider.Slider(1.0, 0.5, 200, (25 + 300 * i, 125), (200, 200, 100), "Density", sliders)      # The density of the fluid
+
         palatte[i]["gravity"] = [[Slider.Slider(-dimensions[j]*0.5, dimensions[j]*1.5, 200, (25 + 300 * i, 175 + j * 25), (200, 100, 200), "Gravity " + chr(ord("X") + j), sliders) for j in range(3)],\
                                  Slider.Slider(-10.0, 10.0, 200, (25 + 300 * i, 150), (200, 200, 100), "Gravity", sliders)] # The point and force of gravity
 
@@ -67,7 +74,7 @@ def main():
               for x in range(len(lights))]
 
     # Creating the particles list to contain the particles for easy access
-    particles = [Fluid_Particle.Particle(random.randint(0, numPalattes - 1), dimensions, [cells, lightCells], [particleSize, lightSize]) for i in range(numParticles)]
+    particles = [Particle.Particle(random.randint(0, numPalattes - 1), dimensions, [cells, lightCells], [particleSize, lightSize]) for i in range(numParticles)]
 
     # The mouse is used to move the particles within a certain range and rotate the screen
     mouseRange = 15000
@@ -92,13 +99,19 @@ def main():
 
         display.fill(background)
 
-        # Updating the Sliders
+        # Updating the Sliders and Buttons
         for slider in sliders: slider.draw(mousePos[1], mouse[0], display)
+        for button in buttons: button.draw(mousePos[1], mouse[0], keys, display)
 
         # Moving the particles and drawing them
         for particle in particles:
             # Hold P to pause
             if not keys[pygame.K_p]:
+                if waveLeft.val: particle.vel[0] -= 10
+                if waveRight.val: particle.vel[0] += 10
+                if waveUp.val: particle.vel[1] += 10
+                if waveDown.val: particle.vel[1] -= 10
+
                 particle.checkCollisions(cells, particleSize, palatte[particle.id]["density"].val)
                 particle.move(dimensions, [cells, lightCells], [particleSize, lightSize], palatte[particle.id]["gravity"], palatte[particle.id]["density"].val)
 
@@ -113,9 +126,9 @@ def main():
                 pygame.draw.circle(display, (r, g, b), pos[0][:2], particleSize*0.5*pos[1])
 
             # Introducing motion with the mouse
-            if mouse[0] and (pos[0][0]-mousePos[1][0])**2 + (pos[0][1]-mousePos[1][1])**2 < mouseRange and pos:
-                particle.vel[0] += (mousePos[1][0] - mousePos[0][0])
-                particle.vel[1] += (mousePos[0][1] - mousePos[1][1])
+            #if mouse[0] and (pos[0][0]-mousePos[1][0])**2 + (pos[0][1]-mousePos[1][1])**2 < mouseRange and pos:
+            #    particle.vel[0] += (mousePos[1][0] - mousePos[0][0])
+            #    particle.vel[1] += (mousePos[0][1] - mousePos[1][1])
 
         # Drawing the lights
         if not showParticles:
