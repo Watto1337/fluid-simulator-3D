@@ -41,15 +41,13 @@ class Slider():
            mousePos[1] > self.pos[1] - Slider.sensitivity and mousePos[1] < self.pos[1] + Slider.sensitivity:
             self.n = max(self.min, min(self.max, (mousePos[0]-self.pos[0]) / self.width * (self.max-self.min) + self.min))
 
+    def draw(self, mousePos, mouseDown, display):
+        if mouseDown: self.adjust(mousePos)
+
         if self.reversed:
             self.val = self.min + self.max - self.n
         else:
             self.val = self.n
-
-        return self.val
-
-    def draw(self, mousePos, mouseDown, display):
-        if mouseDown: self.adjust(mousePos)
 
         draw.line(display, self.colour, self.pos, (self.pos[0] + self.width, self.pos[1]), 2)
         draw.circle(display, self.colour, (self.pos[0] + self.width * (self.n - self.min) / (self.max - self.min), self.pos[1]), 5)

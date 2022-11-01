@@ -37,8 +37,8 @@ def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
     force = Slider.Slider(0.0, 25.0, 200, (25, 385), (100, 150, 250), "Force", sliders)
 
     # Creating a socket to send the data to the lights
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    #sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
 
     # Setting the palatte properties
     for i in range(numPalattes):
@@ -163,7 +163,7 @@ def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
 
                         pygame.draw.circle(display, (r, g, b), pos[0][:2], lightSize*0.2*pos[1])
 
-        sock.sendto(getDDP(data), ("10.0.0.255", 4048))
+        #sock.sendto(getDDP(data), ("10.0.0.255", 4048))
 
         pygame.display.update()
 
@@ -172,8 +172,8 @@ def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
         # Getting the pygame events to pause the simulation, change modes, and quit
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
-                sock.sendto(getDDP([0 for i in range(totalLights)]), ("10.0.0.255", 4048))
-                sock.close()
+                #sock.sendto(getDDP([0 for i in range(totalLights)]), ("10.0.0.255", 4048))
+                #sock.close()
                 pygame.quit()
                 quit()
                 break
