@@ -5,7 +5,7 @@ import pygame, math, random, time, socket, Particle, Slider, Button
 # numPalattes is the integer number of particle types
 # numParticles is the number of particles simulated
 # particleSize is the size of all the particles
-def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
+def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize, showParticles):
     # Initializing the digital display
     pygame.init()
     screen = (500, 200, 900)
@@ -144,6 +144,16 @@ def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
 
                     # Iterating through all of the particles near the light
                     for particle in lightCells[x][y][z]:
+                        if (showParticles):
+                            pos = project(particle.pos, sincos, [dimensions[i]*0.5 for i in range(3)], (particleSize*0.25, particleSize*-0.25, zoom.val), screen)
+
+                            pygame.draw.circle(display,
+                                               (palatte[particle.id]["colour"][0].val,
+                                                palatte[particle.id]["colour"][1].val,
+                                                palatte[particle.id]["colour"][2].val),
+                                               pos[0][:2],
+                                               particleSize*pos[1])
+
                         # Iterating through each colour channel in each particle and storing it
                         for i in range(3):
                             colour[i] += palatte[particle.id]["colour"][i].val
@@ -154,7 +164,7 @@ def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
                         data.append(int(lights[x][y][z][i] * brightness.val))
 
                     # Projecting the light point and capping the colour before drawing it to the screen
-                    if sum(lights[x][y][z]) > 0.3:
+                    if sum(lights[x][y][z]) > 0.3 and not showParticles:
                         pos = project((x*lightSize, y*lightSize, z*lightSize), sincos, [dimensions[i]*0.5 for i in range(3)], (lightSize*0.25, lightSize*-0.25, zoom.val), screen)
 
                         r = lights[x][y][z][0] * brightness.val
@@ -175,10 +185,11 @@ def main(lightSize, lightDimensions, numPalattes, numParticles, particleSize):
                 #sock.sendto(getDDP([0 for i in range(totalLights)]), ("10.0.0.255", 4048))
                 #sock.close()
                 pygame.quit()
-                quit()
-                break
+                return
             elif e.type == pygame.VIDEORESIZE:
                 screen = display.get_size() + (screen[2],)
+            elif e.type == pygame.KEYDOWN and e.dict["key"] == pygame.K_SPACE:
+                showParticles = not showParticles
 
 def getDDP(data):
     return bytearray([65, 0, 0, 1, 0, 0, 0, 3, len(data) >> 8, len(data) & 255] + data)
@@ -207,4 +218,4 @@ def project(point, sincos, origin, offset, screen):
 
     return (p, ratio)
 
-if __name__ == "__main__": main(100, (8, 15, 8), 3, 1000, 25)
+if __name__ == "__main__": main(100, (8, 15, 8), 3, 1000, 25, True)
