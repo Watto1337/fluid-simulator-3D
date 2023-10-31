@@ -18,7 +18,7 @@ def main():
     density = Slider(10, 500, 200, (10, 10), (0, 0, 0), "Density")
     compressability = Slider(0, 100, 200, (10, 30), (0, 0, 0), "Compressability")
 
-    density.set(Particle.density)
+    density.set(Particle.idealDensity)
     compressability.set(Particle.compressability)
 
     while True:
@@ -26,18 +26,22 @@ def main():
         display.fill((255, 255, 255))
         time.sleep(dt)
 
-        Particle.density = density.val
+        Particle.idealDensity = density.val
         Particle.compressability = compressability.val
 
         density.draw(display, pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0])
         compressability.draw(display, pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0])
+
+        # for i in range(len(particles)):
+        #     for j in range(i + 1, len(particles)):
+        #         particles[i].applyDensity(particles[j])
 
         for i in range(len(particles)):
             for j in range(i + 1, len(particles)):
                 particles[i].applyForce(particles[j], dt)
 
         for p in particles:
-            p.accelerate((0, 100), dt)
+            # p.accelerate((0, 100), dt)
             p.update(screenSize)
             pygame.draw.circle(display, (0, 0, 0), (p.x, p.y), 10)
 
