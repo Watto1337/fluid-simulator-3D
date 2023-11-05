@@ -41,7 +41,7 @@ def main():
                 particles[i].applyForce(particles[j], dt)
 
         for p in particles:
-            # p.accelerate((0, 100), dt)
+            p.accelerate((0, 100), dt)
             p.update(screenSize)
             pygame.draw.circle(display, (0, 0, 0), (p.x, p.y), 10)
 

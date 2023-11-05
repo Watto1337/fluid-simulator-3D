@@ -2,7 +2,7 @@ import math, random
 
 class Particle():
     idealDensity = 100
-    compressability = 20
+    compressability = 10
     restitution = 0.5
     
     def __init__(self, x, y):
@@ -22,6 +22,8 @@ class Particle():
         self.ddy = 0
 
         # self.density = 1
+
+        # self.densityGuess = 1
 
     def update(self, bounds):
         self.dx += self.ddx
@@ -55,6 +57,8 @@ class Particle():
         self.ddx = 0
         self.ddy = 0
 
+        # self.densityGuess = self.density
+
         # self.density = 1
     
     def accelerate(self, acceleration, dt):
@@ -64,11 +68,13 @@ class Particle():
     def applyForce(self, other, dt):
         force = self.evaluateForce(other)
 
-        self.ddx -= force[0] * dt * Particle.restitution
-        self.ddy -= force[1] * dt * Particle.restitution
+        factor = dt * Particle.restitution * Particle.compressability ** 2
 
-        other.ddx += force[0] * dt * Particle.restitution
-        other.ddy += force[1] * dt * Particle.restitution
+        self.ddx -= force[0] * factor
+        self.ddy -= force[1] * factor
+
+        other.ddx += force[0] * factor
+        other.ddy += force[1] * factor
 
     def evaluateForce(self, other):
         distance = self.relativeDistance(other)
@@ -87,16 +93,15 @@ class Particle():
         force \
             = (Particle.idealDensity - distance) \
             * (Particle.idealDensity * 2 - distance) ** 2 \
-            / Particle.idealDensity ** 3 \
-            * Particle.compressability ** 2
+            / Particle.idealDensity ** 3
 
         return (position[0] * force, position[1] * force)
     
     # def applyDensity(self, other):
     #     density = self.evaluateDensity(other)
 
-    #     self.density += density
-    #     other.density += density
+    #     self.density += density * other.densityGuess
+    #     other.density += density * self.densityGuess
     
     # def evaluateDensity(self, other):
     #     distance = self.relativeDistance(other)
@@ -106,14 +111,7 @@ class Particle():
 
     #     density \
     #         = (Particle.idealDensity * 2 - distance) ** 2 \
-    #         / Particle.idealDensity ** 2 \
-    #         * Particle.compressability ** 2
-
-    #     # density \
-    #     #     = (Particle.idealDensity - distance) \
-    #     #     * (Particle.idealDensity * 2 - distance) ** 2 \
-    #     #     / Particle.idealDensity ** 3 \
-    #     #     * Particle.compressability ** 2
+    #         / Particle.idealDensity ** 2
         
     #     return density
 
